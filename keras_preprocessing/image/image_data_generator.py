@@ -39,6 +39,10 @@ class ImageDataGenerator(object):
         samplewise_std_normalization: Boolean. Divide each input by its std.
         zca_whitening: Boolean. Apply ZCA whitening.
         zca_epsilon: epsilon for ZCA whitening. Default is 1e-6.
+        zca_rotated: Boolean. Denotes if in zca the svd should be calculated on
+        the data rows=features (False) or on the columns=examples (True) and saves time
+        when the smaller of the two is chosen. Presents an approximation to zca_whitening.
+        Default is 'False".
         rotation_range: Int. Degree range for random rotations.
         width_shift_range: Float, 1-D array-like or int
             - float: fraction of total width, if < 1, or pixels if >= 1.
@@ -258,6 +262,7 @@ class ImageDataGenerator(object):
                  samplewise_std_normalization=False,
                  zca_whitening=False,
                  zca_epsilon=1e-6,
+                 zca_rotated=False,
                  rotation_range=0,
                  width_shift_range=0.,
                  height_shift_range=0.,
@@ -282,6 +287,7 @@ class ImageDataGenerator(object):
         self.samplewise_std_normalization = samplewise_std_normalization
         self.zca_whitening = zca_whitening
         self.zca_epsilon = zca_epsilon
+        self.zca_rotated = zca_rotated
         self.rotation_range = rotation_range
         self.width_shift_range = width_shift_range
         self.height_shift_range = height_shift_range
@@ -733,7 +739,10 @@ class ImageDataGenerator(object):
         if self.zca_whitening:
             if self.principal_components is not None:
                 flatx = np.reshape(x, (-1, np.prod(x.shape[-3:])))
-                whitex = np.dot(flatx, self.principal_components)
+                if self.zca_rotated == False:
+                    whitex = np.dot(flat_x, principal_components)
+                elif self.zca_rotated == True:
+                    whitex = np.dot(flat_x.T, principal_components)
                 x = np.reshape(whitex, x.shape)
             else:
                 warnings.warn('This ImageDataGenerator specifies '
@@ -982,7 +991,10 @@ class ImageDataGenerator(object):
                                   'Install SciPy.')
             flat_x = np.reshape(
                 x, (x.shape[0], x.shape[1] * x.shape[2] * x.shape[3]))
-            sigma = np.dot(flat_x.T, flat_x) / flat_x.shape[0]
+            if self.zca_rotated == False:
+                sigma = np.dot(flat_x.T, flat_x) / flat_x.shape[0]
+            elif self.zca_rotated == True:
+                sigma = np.dot(flat_x, flat_x.T) / flat_x.shape[0]
             u, s, _ = linalg.svd(sigma)
             s_inv = 1. / np.sqrt(s[np.newaxis] + self.zca_epsilon)
             self.principal_components = (u * s_inv).dot(u.T)
