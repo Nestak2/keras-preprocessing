@@ -993,8 +993,11 @@ class ImageDataGenerator(object):
                 x, (x.shape[0], x.shape[1] * x.shape[2] * x.shape[3]))
             if self.zca_rotated == False:
                 sigma = np.dot(flat_x.T, flat_x) / flat_x.shape[0]
+                u, s, _ = linalg.svd(sigma)
             elif self.zca_rotated == True:
                 sigma = np.dot(flat_x, flat_x.T) / flat_x.shape[0]
-            u, s, _ = linalg.svd(sigma)
+                u, s, _ = linalg.svd(sigma)
+                u = np.dot(flat_x.T, u) / np.sqrt(s*flat_x.shape[0])
+            
             s_inv = 1. / np.sqrt(s[np.newaxis] + self.zca_epsilon)
             self.principal_components = (u * s_inv).dot(u.T)
